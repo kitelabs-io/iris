@@ -43,6 +43,8 @@ import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
 import { BaseCacheStorage } from './storage/BaseCacheStorage';
 import { CacheStorage } from './storage/CacheStorage';
+import { WingRidersStableAnalyzer } from './dex/WingRidersStableAnalyzer';
+import { SplashStableAnalyzer } from './dex/SpashStableAnalyzer';
 
 export class IndexerApplication {
   private readonly _cache: BaseCacheStorage;
@@ -59,24 +61,27 @@ export class IndexerApplication {
   private _indexers: BaseIndexer[] = [
     new SyncIndexer(),
     new AmmDexTransactionIndexer([
-      new MinswapAnalyzer(this),
-      new MinswapV2Analyzer(this),
-      new MinswapStableAnalyzer(this),
-      new SundaeSwapAnalyzer(this),
-      new SundaeSwapV3Analyzer(this),
-      new WingRidersAnalyzer(this),
-      new WingRidersV2Analyzer(this),
-      new SpectrumAnalyzer(this),
-      new SplashAnalyzer(this),
-      new WingRidersStableV2Analyzer(this),
+      // new MinswapAnalyzer(this),
+      // new MinswapV2Analyzer(this),
+      // new MinswapStableAnalyzer(this),
+      // new SundaeSwapAnalyzer(this),
+      // new SundaeSwapV3Analyzer(this),
+      // new WingRidersAnalyzer(this),
+      // new WingRidersV2Analyzer(this),
+      // new SpectrumAnalyzer(this),
+      // new SplashAnalyzer(this),
+      new SplashStableAnalyzer(this),
+      // new WingRidersStableAnalyzer(this),
       // new TeddySwapAnalyzer(this),
-      new VyFiAnalyzer(this),
+      // new VyFiAnalyzer(this),
     ]),
-    // new OrderBookDexTransactionIndexer([
-    // new GeniusYieldAnalyzer(this),
-    // new AxoAnalyzer(this),
-    // ]),
-    new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
+    new OrderBookDexTransactionIndexer([
+      // new GeniusYieldAnalyzer(this),
+      // new AxoAnalyzer(this),
+    ]),
+    new HybridDexTransactionIndexer([
+      // new MuesliSwapAnalyzer(this)
+    ]),
   ];
 
   /**

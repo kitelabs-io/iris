@@ -36,28 +36,12 @@ const SPECTRUM_POOL_V2_CONTRACT_ADDRESS: string =
   'addr1x94ec3t25egvhqy2n265xfhq882jxhkknurfe9ny4rl9k6dj764lvrxdayh2ux30fl0ktuh27csgmpevdu89jlxppvrst84slu';
 const OTHER_SPECTRUM_POOL_CONTRACT_ADDRESS: string =
   'addr1xxg94wrfjcdsjncmsxtj0r87zk69e0jfl28n934sznu95tdj764lvrxdayh2ux30fl0ktuh27csgmpevdu89jlxppvrs2993lw';
-const DEPOSIT_CONTRACT_ADDRESS: string =
-  'addr1wyr4uz0tp75fu8wrg6gm83t20aphuc9vt6n8kvu09ctkugqpsrmeh';
-const WITHDRAW_CONTRACT_ADDRESS: string =
-  'addr1wxpa5704x8qel88ympf4natfdzn59nc9esj7609y3sczmmsasees8';
-const CANCEL_ORDER_DATUM: string = 'd87980';
-const ORDER_SCRIPT_HASHES: string[] = [
-  '2025463437ee5d64e89814a66ce7f98cb184a66ae85a2fbbfd750106',
-  '464eeee89f05aff787d40045af2a40a83fd96c513197d32fbc54ff02',
-];
-const CANCEL_REFERENCE_TX_HASHES: string[] = [
-  'b91eda29d145ab6c0bc0d6b7093cb24b131440b7b015033205476f39c690a51f',
-];
-const POOL_CONTRACT_STAKE_KEY: string =
-  'b2f6abf60ccde92eae1a2f4fdf65f2eaf6208d872c6f0e597cc10b07';
-const ACTION_SWAP: string = '00';
 const MAX_INT: bigint = 9_223_372_036_854_775_807n;
-const BATCHER_FEE = 2_000_000n;
+const STABLE_POOL_CONTRACT_STAKE_KEY: string =
+  'f1b2f6abf60ccde92eae1a2f4fdf65f2eaf6208d872c6f0e597cc10b07';
+
 const FEE_DENOMINATOR = 100_000;
-const SPLASH_WEIGHTED_POOL_SCRIPTS = [
-  'c5283689ea30e0920c50adf77345b5809c05c962cc111e0f1d2dbedb',
-  'f60fd1e70f4b9dfc09cdde8d7f7f1277de2694c82a516d7d3cc9e03e',
-];
+const BATCHER_FEE = 2_000_000n;
 
 export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
   public startSlot: number = 116958314;
@@ -99,7 +83,10 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
           output.toAddress
         );
 
-        if (addressDetails.stakeCredential?.hash !== POOL_CONTRACT_STAKE_KEY) {
+        if (
+          addressDetails.stakeCredential?.hash !==
+          STABLE_POOL_CONTRACT_STAKE_KEY
+        ) {
           return undefined;
         }
 
@@ -183,12 +170,12 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
             datumParameters[DatumParameterKey.RoyaltyB] ?? 0
           );
 
-          const isWeighted = SPLASH_WEIGHTED_POOL_SCRIPTS.includes(
-            addressDetails.paymentCredential?.hash || ''
-          );
+          // const isWeighted = SPLASH_WEIGHTED_POOL_SCRIPTS.includes(
+          //   addressDetails.paymentCredential?.hash || ''
+          // );
 
           return LiquidityPoolState.make(
-            Dex.Splash,
+            Dex.SplashStable,
             output.toAddress,
             nft.identifier(),
             tokenA,
@@ -217,7 +204,7 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
               feeDenominator: FEE_DENOMINATOR,
               minAda: 0n.toString(),
               // Only support 1/4 weighted pools
-              ...(isWeighted ? { weight0: 1, weight1: 4 } : {}),
+              // ...(isWeighted ? { weight0: 1, weight1: 4 } : {}),
             }
           );
         } catch (e) {

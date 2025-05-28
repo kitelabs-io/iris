@@ -115,6 +115,7 @@ export enum Dex {
   MuesliSwap = 'MuesliSwap',
   Spectrum = 'Spectrum',
   Splash = 'Splash',
+  SplashStable = 'SplashStable',
   TeddySwap = 'TeddySwap',
   GeniusYield = 'GeniusYield',
   VyFinance = 'VyFinance',
