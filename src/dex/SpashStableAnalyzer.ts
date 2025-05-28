@@ -59,7 +59,7 @@ const SPLASH_WEIGHTED_POOL_SCRIPTS = [
   'f60fd1e70f4b9dfc09cdde8d7f7f1277de2694c82a516d7d3cc9e03e',
 ];
 
-export class SplashAnalyzer extends BaseAmmDexAnalyzer {
+export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
   public startSlot: number = 116958314;
 
   /**
@@ -68,96 +68,9 @@ export class SplashAnalyzer extends BaseAmmDexAnalyzer {
   public async analyzeTransaction(
     transaction: Transaction
   ): Promise<AmmDexOperation[]> {
-    return Promise.all([
-      this.liquidityPoolStates(transaction),
-      this.swapOrders(transaction),
-      this.depositOrders(transaction),
-      this.withdrawOrders(transaction),
-      this.cancelledOperationInputs(
-        transaction,
-        ORDER_SCRIPT_HASHES,
-        CANCEL_ORDER_DATUM,
-        CANCEL_REFERENCE_TX_HASHES
-      ),
-    ]).then((operations: AmmDexOperation[][]) => operations.flat());
-  }
-
-  /**
-   * Check for swap orders in transaction.
-   */
-  protected async swapOrders(
-    transaction: Transaction
-  ): Promise<LiquidityPoolSwap[]> {
-    return transaction.outputs
-      .map((output: Utxo) => {
-        if (!output.datum) {
-          return undefined;
-        }
-
-        const addressDetails: AddressDetails = getAddressDetails(
-          output.toAddress
-        );
-
-        if (
-          !addressDetails.paymentCredential ||
-          !ORDER_SCRIPT_HASHES.includes(addressDetails.paymentCredential?.hash)
-        ) {
-          return undefined;
-        }
-
-        try {
-          const definitionField: DefinitionField = toDefinitionDatum(
-            Data.from(output.datum)
-          );
-          const builder: DefinitionBuilder = new DefinitionBuilder(
-            swapDefinition
-          );
-          const datumParameters: DatumParameters = builder.pullParameters(
-            definitionField as DefinitionConstr
-          );
-
-          if (datumParameters.Action !== ACTION_SWAP) return undefined;
-
-          const swapInToken: Token =
-            datumParameters.SwapInTokenPolicyId === ''
-              ? 'lovelace'
-              : new Asset(
-                  datumParameters.SwapInTokenPolicyId as string,
-                  datumParameters.SwapInTokenAssetName as string
-                );
-          const swapOutToken: Token =
-            datumParameters.SwapOutTokenPolicyId === ''
-              ? 'lovelace'
-              : new Asset(
-                  datumParameters.SwapOutTokenPolicyId as string,
-                  datumParameters.SwapOutTokenAssetName as string
-                );
-
-          return LiquidityPoolSwap.make(
-            Dex.Splash,
-            undefined,
-            swapInToken,
-            swapOutToken,
-            Number(datumParameters.SwapInAmount),
-            Number(datumParameters.MinReceive),
-            Number(datumParameters.ExecutionFee),
-            datumParameters.SenderPubKeyHash as string,
-            (datumParameters.SenderStakingKeyHash ?? '') as string,
-            transaction.blockSlot,
-            transaction.hash,
-            output.index,
-            output.toAddress,
-            SwapOrderType.Instant,
-            transaction,
-            Dex.Spectrum
-          );
-        } catch (e) {
-          return undefined;
-        }
-      })
-      .filter(
-        (operation: LiquidityPoolSwap | undefined) => operation !== undefined
-      ) as LiquidityPoolSwap[];
+    return Promise.all([this.liquidityPoolStates(transaction)]).then(
+      (operations: AmmDexOperation[][]) => operations.flat()
+    );
   }
 
   /**
@@ -315,6 +228,15 @@ export class SplashAnalyzer extends BaseAmmDexAnalyzer {
       .filter(
         (operation: LiquidityPoolState | undefined) => operation !== undefined
       ) as LiquidityPoolState[];
+  }
+
+  /**
+   * Check for swap orders in transaction.
+   */
+  protected async swapOrders(
+    transaction: Transaction
+  ): Promise<LiquidityPoolSwap[]> {
+    return [];
   }
 
   /**
