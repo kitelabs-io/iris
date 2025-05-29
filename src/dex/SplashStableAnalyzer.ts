@@ -153,22 +153,12 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
 
           if (reserveA === 0n || reserveB === 0n) return undefined;
 
-          const treasuryA = BigInt(
-            datumParameters[DatumParameterKey.PoolAssetATreasury] ?? 0
+          const treasury0 = BigInt(
+            datumParameters[DatumParameterKey.Treasury0] ?? 0
           );
-          const treasuryB = BigInt(
-            datumParameters[DatumParameterKey.PoolAssetBTreasury] ?? 0
+          const treasury1 = BigInt(
+            datumParameters[DatumParameterKey.Treasury1] ?? 0
           );
-          const royaltyA = BigInt(
-            datumParameters[DatumParameterKey.RoyaltyA] ?? 0
-          );
-          const royaltyB = BigInt(
-            datumParameters[DatumParameterKey.RoyaltyB] ?? 0
-          );
-
-          // const isWeighted = SPLASH_WEIGHTED_POOL_SCRIPTS.includes(
-          //   addressDetails.paymentCredential?.hash || ''
-          // );
 
           return LiquidityPoolState.make(
             Dex.SplashStable,
@@ -177,8 +167,8 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
             tokenA,
             tokenB,
             lpTokenBalance.asset,
-            String(reserveA - treasuryA - royaltyA),
-            String(reserveB - treasuryB - royaltyB),
+            String(reserveA - treasury0),
+            String(reserveB - treasury1),
             Number(MAX_INT - lpTokenBalance.quantity),
             (Number(datumParameters.LpFeeNumerator) / FEE_DENOMINATOR) * 100,
             transaction.blockSlot,
