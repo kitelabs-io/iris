@@ -5,6 +5,7 @@ import CONFIG from './config';
 import { ApplicationContext } from './constants';
 import { TokenMetadataService } from './services/TokenMetadataService';
 import { QueueService } from './services/QueueService';
+import { CronjobService } from './services/CronjobService';
 
 const operationWs: WebsocketService = new WebsocketService(
   CONFIG.OPERATION_WEBSOCKET_PORT
@@ -15,5 +16,6 @@ const dbService: DatabaseService = new DatabaseService(
 );
 const metadataService: TokenMetadataService = new TokenMetadataService();
 const queue: QueueService = new QueueService();
+const cronjobService: CronjobService = new CronjobService();
 
-export { operationWs, eventService, dbService, metadataService, queue };
+export { operationWs, eventService, dbService, metadataService, queue, cronjobService };

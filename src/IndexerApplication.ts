@@ -16,29 +16,17 @@ import { EntityManager } from 'typeorm';
 import CONFIG from './config';
 import { FIRST_SYNC_BLOCK_HASH, FIRST_SYNC_SLOT } from './constants';
 import { Sync } from './db/entities/Sync';
-import { MinswapAnalyzer } from './dex/MinswapAnalyzer';
-import { MinswapStableAnalyzer } from './dex/MinswapStableAnalyzer';
-import { MinswapV2Analyzer } from './dex/MinswapV2Analyzer';
-import { MuesliSwapAnalyzer } from './dex/MuesliSwapAnalyzer';
-import { SpectrumAnalyzer } from './dex/SpectrumAnalyzer';
-import { SplashAnalyzer } from './dex/SplashAnalyzer';
-import { SundaeSwapAnalyzer } from './dex/SundaeSwapAnalyzer';
-import { SundaeSwapV3Analyzer } from './dex/SundaeSwapV3Analyzer';
-import { VyFiAnalyzer } from './dex/VyFiAnalyzer';
-import { WingRidersAnalyzer } from './dex/WingRidersAnalyzer';
-import { WingRidersStableV2Analyzer } from './dex/WingRidersStableV2Analyzer';
-import { WingRidersV2Analyzer } from './dex/WingRidersV2Analyzer';
-import { AmmDexTransactionIndexer } from './indexers/AmmDexTransactionIndexer';
 import { BaseIndexer } from './indexers/BaseIndexer';
-import { HybridDexTransactionIndexer } from './indexers/HybridDexTransactionIndexer';
-import { SyncIndexer } from './indexers/SyncIndexer';
 import {
+  cronjobService,
   dbService,
   eventService,
   metadataService,
   operationWs,
   queue,
 } from './indexerServices';
+import { BaseCronjob } from './jobs/BaseCronjob';
+import { HealthCheckCronjob } from './jobs/HealthCheckCronjob';
 import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
 import { BaseCacheStorage } from './storage/BaseCacheStorage';
@@ -52,39 +40,43 @@ export class IndexerApplication {
     | ChainSynchronization.ChainSynchronizationClient
     | undefined = undefined;
   private _ogmiosContext: InteractionContext | undefined = undefined;
+  private _cronjobs: BaseCronjob[] = [
+    // new CleanupCronjob(),
+    new HealthCheckCronjob(),
+  ];
 
   /**
    * Indexers to make aware of new blocks & rollbacks.
    */
   private _indexers: BaseIndexer[] = [
-    new SyncIndexer(),
-    new AmmDexTransactionIndexer([
-      new MinswapAnalyzer(this),
-      new MinswapV2Analyzer(this),
-      new MinswapStableAnalyzer(this),
-      new SundaeSwapAnalyzer(this),
-      new SundaeSwapV3Analyzer(this),
-      new WingRidersAnalyzer(this),
-      new WingRidersV2Analyzer(this),
-      new SpectrumAnalyzer(this),
-      new SplashAnalyzer(this),
-      new WingRidersStableV2Analyzer(this),
-      // new TeddySwapAnalyzer(this),
-      new VyFiAnalyzer(this),
-    ]),
-    // new OrderBookDexTransactionIndexer([
-    // new GeniusYieldAnalyzer(this),
-    // new AxoAnalyzer(this),
+    // new SyncIndexer(),
+    // new AmmDexTransactionIndexer([
+    //   new MinswapAnalyzer(this),
+    //   new MinswapV2Analyzer(this),
+    //   new MinswapStableAnalyzer(this),
+    //   new SundaeSwapAnalyzer(this),
+    //   new SundaeSwapV3Analyzer(this),
+    //   new WingRidersAnalyzer(this),
+    //   new WingRidersV2Analyzer(this),
+    //   new SpectrumAnalyzer(this),
+    //   new SplashAnalyzer(this),
+    //   new WingRidersStableV2Analyzer(this),
+    //   new VyFiAnalyzer(this),
     // ]),
-    new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
+    // new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
   ];
 
   /**
    * IndexerApplication constructor.
    */
-  constructor(cache?: BaseCacheStorage, indexers: BaseIndexer[] = []) {
+  constructor(
+    cache?: BaseCacheStorage,
+    indexers: BaseIndexer[] = [],
+    cronjobs: BaseCronjob[] = []
+  ) {
     this._cache = cache ?? new CacheStorage();
     this._indexers = [...this._indexers, ...indexers];
+    this._cronjobs = [...this._cronjobs, ...cronjobs];
   }
 
   /**
@@ -116,6 +108,12 @@ export class IndexerApplication {
     return this;
   }
 
+  public withCronjobs(cronjobs: BaseCronjob[]): IndexerApplication {
+    this._cronjobs = [...this._cronjobs, ...cronjobs];
+
+    return this;
+  }
+
   /**
    * Start application.
    */
@@ -137,8 +135,10 @@ export class IndexerApplication {
       operationWs.boot(),
       metadataService.boot(),
       queue.boot(),
+      cronjobService.boot(this),
     ])
       .then(() => {
+        this.registerCronjobs();
         logInfo('Services booted');
       })
       .catch((reason) => {
@@ -276,5 +276,19 @@ export class IndexerApplication {
     }
 
     requestNext();
+  }
+
+  /**
+   * Register all cronjobs with the cronjob service
+   */
+  private registerCronjobs(): void {
+    for (const cronjob of this._cronjobs) {
+      cronjobService.registerTask({
+        name: cronjob.name,
+        cronExpression: cronjob.cronExpression,
+        handler: () => cronjob.execute(),
+        enabled: cronjob.isEnabled(),
+      });
+    }
   }
 }
