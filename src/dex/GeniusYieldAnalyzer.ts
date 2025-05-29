@@ -40,11 +40,7 @@ export class GeniusYieldAnalyzer extends BaseOrderBookDexAnalyzer {
   public async analyzeTransaction(
     transaction: Transaction
   ): Promise<OrderBookDexOperation[]> {
-    return Promise.all([
-      this.orders(transaction),
-      this.matches(transaction),
-      this.cancellations(transaction),
-    ]).then((operations: OrderBookDexOperation[][]) => operations.flat());
+    return Promise.resolve([]);
   }
 
   protected orders(

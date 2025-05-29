@@ -59,14 +59,6 @@ export class VyFiAnalyzer extends BaseAmmDexAnalyzer {
 
     return Promise.all([
       this.liquidityPoolStates(transaction),
-      this.swapOrders(transaction),
-      this.depositOrders(transaction),
-      this.withdrawOrders(transaction),
-      this.cancelledOperationInputs(
-        transaction,
-        this.orderAddresses,
-        CANCEL_DATUM
-      ),
     ]).then((operations: AmmDexOperation[][]) => operations.flat());
   }
 
