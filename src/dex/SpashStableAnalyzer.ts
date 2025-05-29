@@ -26,6 +26,7 @@ import poolDefinition from './definitions/splash/pool';
 import poolDepositDefinition from './definitions/splash/pool-deposit';
 import poolWithdrawDefinition from './definitions/splash/pool-withdraw';
 import swapDefinition from './definitions/splash/swap';
+import { logInfo } from '../logger';
 
 /**
  * Splash constants.
@@ -38,7 +39,7 @@ const OTHER_SPECTRUM_POOL_CONTRACT_ADDRESS: string =
   'addr1xxg94wrfjcdsjncmsxtj0r87zk69e0jfl28n934sznu95tdj764lvrxdayh2ux30fl0ktuh27csgmpevdu89jlxppvrs2993lw';
 const MAX_INT: bigint = 9_223_372_036_854_775_807n;
 const STABLE_POOL_CONTRACT_STAKE_KEY: string =
-  'f1b2f6abf60ccde92eae1a2f4fdf65f2eaf6208d872c6f0e597cc10b07';
+  'b2f6abf60ccde92eae1a2f4fdf65f2eaf6208d872c6f0e597cc10b07';
 
 const FEE_DENOMINATOR = 100_000;
 const BATCHER_FEE = 2_000_000n;
@@ -63,25 +64,37 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
   protected liquidityPoolStates(
     transaction: Transaction
   ): LiquidityPoolState[] {
+    if (
+      transaction.hash ===
+      '8ca73d75ac0a85f15513f4db65fe549fa3f198eb99fa8543ecb94e1f3bae1840'
+    ) {
+      console.log('SplashStableAnalyzer', transaction.hash);
+    }
     return transaction.outputs
       .map((output: Utxo) => {
         if (!output.datum) {
           return undefined;
         }
 
-        if (
-          [
-            SPECTRUM_POOL_V1_CONTRACT_ADDRESS,
-            SPECTRUM_POOL_V2_CONTRACT_ADDRESS,
-            OTHER_SPECTRUM_POOL_CONTRACT_ADDRESS,
-          ].includes(output.toAddress)
-        ) {
-          return undefined;
-        }
+        // if (
+        //   [
+        //     SPECTRUM_POOL_V1_CONTRACT_ADDRESS,
+        //     SPECTRUM_POOL_V2_CONTRACT_ADDRESS,
+        //     OTHER_SPECTRUM_POOL_CONTRACT_ADDRESS,
+        //   ].includes(output.toAddress)
+        // ) {
+        //   return undefined;
+        // }
 
         const addressDetails: AddressDetails = getAddressDetails(
           output.toAddress
         );
+
+        if (addressDetails.stakeCredential?.hash) {
+          logInfo(
+            `SplashStableAnalyzer: Analyzing output ${addressDetails.stakeCredential?.hash}`
+          );
+        }
 
         if (
           addressDetails.stakeCredential?.hash !==
