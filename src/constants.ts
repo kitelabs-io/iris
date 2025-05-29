@@ -62,6 +62,7 @@ export enum DatumParameterKey {
   AScale = 'AScale',
   BScale = 'BScale',
   TreasuryFee = 'TreasuryFee',
+  TreasuryFeeNumerator = 'TreasuryFeeNumerator',
   RoyaltyFee = 'RoyaltyFee',
   FeeANumerator = 'FeeANumerator',
   FeeBNumerator = 'FeeBNumerator',
