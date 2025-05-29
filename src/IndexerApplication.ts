@@ -43,7 +43,6 @@ import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
 import { BaseCacheStorage } from './storage/BaseCacheStorage';
 import { CacheStorage } from './storage/CacheStorage';
-import { WingRidersStableAnalyzer } from './dex/WingRidersStableAnalyzer';
 import { SplashStableAnalyzer } from './dex/SplashStableAnalyzer';
 import { OrderBookDexTransactionIndexer } from './indexers/OrderBookDexTransactionIndexer';
 
@@ -72,7 +71,7 @@ export class IndexerApplication {
       new SpectrumAnalyzer(this),
       new SplashAnalyzer(this),
       new SplashStableAnalyzer(this),
-      new WingRidersStableAnalyzer(this),
+      new WingRidersStableV2Analyzer(this),
       // new TeddySwapAnalyzer(this),
       new VyFiAnalyzer(this),
     ]),
