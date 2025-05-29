@@ -34,7 +34,6 @@ export class WingRidersStableV2Analyzer extends BaseAmmDexAnalyzer {
   ): Promise<AmmDexOperation[]> {
     return Promise.all([
       this.liquidityPoolStates(transaction),
-      this.swapOrders(transaction),
     ]).then((operations: AmmDexOperation[][]) => operations.flat(2));
   }
 

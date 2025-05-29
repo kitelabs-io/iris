@@ -64,19 +64,6 @@ export class MinswapAnalyzer extends BaseAmmDexAnalyzer {
   ): Promise<AmmDexOperation[]> {
     return Promise.all([
       this.liquidityPoolStates(transaction),
-      this.swapOrders(transaction),
-      this.zapOrders(transaction),
-      this.depositOrders(transaction),
-      this.withdrawOrders(transaction),
-      this.cancelledOperationInputs(
-        transaction,
-        [
-          ORDER_V1_CONTRACT_ADDRESS,
-          ORDER_V2_CONTRACT_ADDRESS,
-          ORDER_V3_CONTRACT_ADDRESS,
-        ],
-        CANCEL_ORDER_DATUM
-      ),
     ]).then((operations: AmmDexOperation[][]) => operations.flat());
   }
 
