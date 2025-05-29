@@ -1,0 +1,239 @@
+import {
+  AddressDetails,
+  Data,
+  getAddressDetails,
+} from '@lucid-evolution/lucid';
+import { DatumParameterKey, Dex, SwapOrderType } from '../constants';
+import { Asset, Token } from '../db/entities/Asset';
+import { LiquidityPoolDeposit } from '../db/entities/LiquidityPoolDeposit';
+import { LiquidityPoolState } from '../db/entities/LiquidityPoolState';
+import { LiquidityPoolSwap } from '../db/entities/LiquidityPoolSwap';
+import { LiquidityPoolWithdraw } from '../db/entities/LiquidityPoolWithdraw';
+import { OperationStatus } from '../db/entities/OperationStatus';
+import { DefinitionBuilder } from '../DefinitionBuilder';
+import {
+  AmmDexOperation,
+  AssetBalance,
+  DatumParameters,
+  DefinitionConstr,
+  DefinitionField,
+  Transaction,
+  Utxo,
+} from '../types';
+import { toDefinitionDatum } from '../utils';
+import { BaseAmmDexAnalyzer } from './BaseAmmDexAnalyzer';
+import poolDefinition from './definitions/splash-stable/pool';
+
+/**
+ * Splash constants.
+ */
+const SPECTRUM_POOL_V1_CONTRACT_ADDRESS: string =
+  'addr1x8nz307k3sr60gu0e47cmajssy4fmld7u493a4xztjrll0aj764lvrxdayh2ux30fl0ktuh27csgmpevdu89jlxppvrswgxsta';
+const SPECTRUM_POOL_V2_CONTRACT_ADDRESS: string =
+  'addr1x94ec3t25egvhqy2n265xfhq882jxhkknurfe9ny4rl9k6dj764lvrxdayh2ux30fl0ktuh27csgmpevdu89jlxppvrst84slu';
+const OTHER_SPECTRUM_POOL_CONTRACT_ADDRESS: string =
+  'addr1xxg94wrfjcdsjncmsxtj0r87zk69e0jfl28n934sznu95tdj764lvrxdayh2ux30fl0ktuh27csgmpevdu89jlxppvrs2993lw';
+const MAX_INT: bigint = 9_223_372_036_854_775_807n;
+const STABLE_POOL_PAYMENT_HASH: string =
+  '5d3df99fcfbbf282bd76a3d76a2e30bdd22e61c56f1462447938933b';
+
+const FEE_DENOMINATOR = 100_000;
+const BATCHER_FEE = 2_000_000n;
+
+export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
+  public startSlot: number = 116958314;
+
+  /**
+   * Analyze transaction for possible DEX operations.
+   */
+  public async analyzeTransaction(
+    transaction: Transaction
+  ): Promise<AmmDexOperation[]> {
+    return Promise.all([this.liquidityPoolStates(transaction)]).then(
+      (operations: AmmDexOperation[][]) => operations.flat()
+    );
+  }
+
+  /**
+   * Check for updated liquidity pool states in transaction.
+   */
+  protected liquidityPoolStates(
+    transaction: Transaction
+  ): LiquidityPoolState[] {
+    return transaction.outputs
+      .map((output: Utxo) => {
+        if (!output.datum) {
+          return undefined;
+        }
+
+        if (
+          [
+            SPECTRUM_POOL_V1_CONTRACT_ADDRESS,
+            SPECTRUM_POOL_V2_CONTRACT_ADDRESS,
+            OTHER_SPECTRUM_POOL_CONTRACT_ADDRESS,
+          ].includes(output.toAddress)
+        ) {
+          return undefined;
+        }
+
+        const addressDetails: AddressDetails = getAddressDetails(
+          output.toAddress
+        );
+
+        if (
+          addressDetails.paymentCredential?.hash !== STABLE_POOL_PAYMENT_HASH
+        ) {
+          return undefined;
+        }
+
+        try {
+          const definitionField: DefinitionField = toDefinitionDatum(
+            Data.from(output.datum)
+          );
+          const builder: DefinitionBuilder = new DefinitionBuilder(
+            poolDefinition
+          );
+          const datumParameters: DatumParameters = builder.pullParameters(
+            definitionField as DefinitionConstr
+          );
+
+          const nft: Asset | undefined = output.assetBalances.find(
+            (balance: AssetBalance) => {
+              return (
+                balance.asset.identifier() ===
+                `${datumParameters.TokenPolicyId}${datumParameters.TokenAssetName}`
+              );
+            }
+          )?.asset;
+          const lpTokenBalance: AssetBalance | undefined =
+            output.assetBalances.find((balance: AssetBalance) => {
+              return (
+                balance.asset.identifier() ===
+                `${datumParameters.LpTokenPolicyId}${datumParameters.LpTokenAssetName}`
+              );
+            });
+
+          if (!nft || !lpTokenBalance) return undefined;
+
+          const tokenA: Token =
+            datumParameters.PoolAssetAPolicyId === ''
+              ? 'lovelace'
+              : new Asset(
+                  datumParameters.PoolAssetAPolicyId as string,
+                  datumParameters.PoolAssetAAssetName as string
+                );
+          const tokenB: Token =
+            datumParameters.PoolAssetBPolicyId === ''
+              ? 'lovelace'
+              : new Asset(
+                  datumParameters.PoolAssetBPolicyId as string,
+                  datumParameters.PoolAssetBAssetName as string
+                );
+
+          const possibleOperationStatuses: OperationStatus[] =
+            this.spentOperationInputs(transaction);
+
+          const reserveA = BigInt(
+            tokenA === 'lovelace'
+              ? output.lovelaceBalance
+              : (output.assetBalances.find(
+                  (balance: AssetBalance) =>
+                    balance.asset.identifier() === tokenA.identifier()
+                )?.quantity ?? 0n)
+          );
+
+          const reserveB = BigInt(
+            tokenB === 'lovelace'
+              ? output.lovelaceBalance
+              : (output.assetBalances.find(
+                  (balance: AssetBalance) =>
+                    balance.asset.identifier() === tokenB.identifier()
+                )?.quantity ?? 0n)
+          );
+
+          if (reserveA === 0n || reserveB === 0n) return undefined;
+
+          const treasury0 = BigInt(
+            datumParameters[DatumParameterKey.Treasury0] ?? 0
+          );
+          const treasury1 = BigInt(
+            datumParameters[DatumParameterKey.Treasury1] ?? 0
+          );
+
+          return LiquidityPoolState.make(
+            Dex.SplashStable,
+            output.toAddress,
+            nft.identifier(),
+            tokenA,
+            tokenB,
+            lpTokenBalance.asset,
+            String(reserveA - treasury0),
+            String(reserveB - treasury1),
+            Number(MAX_INT - lpTokenBalance.quantity),
+            (Number(datumParameters.LpFeeNumerator) / FEE_DENOMINATOR) * 100,
+            transaction.blockSlot,
+            transaction.hash,
+            possibleOperationStatuses,
+            transaction.inputs,
+            transaction.outputs.filter(
+              (sibling: Utxo) => sibling.index !== output.index
+            ),
+            {
+              txHash: transaction.hash,
+              batcherFee: BATCHER_FEE.toString(),
+              // swapFee = lpFee + treasuryFee + royaltyFee
+              // The lpFee is reversed, so we need to subtract it
+              feeNumerator:
+                Number(datumParameters.LpFeeNumerator ?? 0) +
+                Number(datumParameters.TreasuryFeeNumerator ?? 0),
+              feeDenominator: FEE_DENOMINATOR,
+              minAda: 0n.toString(),
+              [DatumParameterKey.Amp]: String(datumParameters.Amp),
+              [DatumParameterKey.Multiplier0]: String(
+                datumParameters.Multiplier0 ?? 0
+              ),
+              [DatumParameterKey.Multiplier1]: String(
+                datumParameters.Multiplier1 ?? 0
+              ),
+              [DatumParameterKey.Treasury0]: String(
+                datumParameters.Treasury0 ?? 0
+              ),
+
+              [DatumParameterKey.Treasury1]: String(
+                datumParameters.Treasury1 ?? 0
+              ),
+            }
+          );
+        } catch (e) {
+          return undefined;
+        }
+      })
+      .flat()
+      .filter(
+        (operation: LiquidityPoolState | undefined) => operation !== undefined
+      ) as LiquidityPoolState[];
+  }
+
+  /**
+   * Check for swap orders in transaction.
+   */
+  protected async swapOrders(
+    transaction: Transaction
+  ): Promise<LiquidityPoolSwap[]> {
+    return [];
+  }
+
+  /**
+   * Check for liquidity pool deposits in transaction.
+   */
+  protected depositOrders(transaction: Transaction): LiquidityPoolDeposit[] {
+    return [];
+  }
+
+  /**
+   * Check for liquidity pool withdraws in transaction.
+   */
+  protected withdrawOrders(transaction: Transaction): LiquidityPoolWithdraw[] {
+    return [];
+  }
+}
