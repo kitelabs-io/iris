@@ -45,6 +45,7 @@ import { BaseCacheStorage } from './storage/BaseCacheStorage';
 import { CacheStorage } from './storage/CacheStorage';
 import { WingRidersStableAnalyzer } from './dex/WingRidersStableAnalyzer';
 import { SplashStableAnalyzer } from './dex/SplashStableAnalyzer';
+import { OrderBookDexTransactionIndexer } from './indexers/OrderBookDexTransactionIndexer';
 
 export class IndexerApplication {
   private readonly _cache: BaseCacheStorage;
