@@ -20,6 +20,7 @@ type Config = {
   OPERATION_WEBSOCKET_PORT: number;
 
   API_PORT: number;
+  SYNC_STALE_THRESHOLD_MINUTES: number;
 
   GITHUB_ACCESS_TOKEN: string;
   HALT: boolean;
@@ -39,7 +40,8 @@ const CONFIG: Config = {
   DATABASE_PASSWORD: process.env.DATABASE_PASSWORD || '',
   DATABASE: process.env.DATABASE || '',
   DATABASE_TYPE: process.env.DATABASE_TYPE || 'mysql',
-
+  SYNC_STALE_THRESHOLD_MINUTES:
+    Number(process.env.SYNC_STALE_THRESHOLD_MINUTES) || 5,
   OPERATION_WEBSOCKET_PORT:
     Number(process.env.OPERATION_WEBSOCKET_PORT) || 8080,
 

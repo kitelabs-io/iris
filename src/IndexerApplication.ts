@@ -16,7 +16,22 @@ import { EntityManager } from 'typeorm';
 import CONFIG from './config';
 import { FIRST_SYNC_BLOCK_HASH, FIRST_SYNC_SLOT } from './constants';
 import { Sync } from './db/entities/Sync';
+import { MinswapAnalyzer } from './dex/MinswapAnalyzer';
+import { MinswapStableAnalyzer } from './dex/MinswapStableAnalyzer';
+import { MinswapV2Analyzer } from './dex/MinswapV2Analyzer';
+import { MuesliSwapAnalyzer } from './dex/MuesliSwapAnalyzer';
+import { SpectrumAnalyzer } from './dex/SpectrumAnalyzer';
+import { SplashAnalyzer } from './dex/SplashAnalyzer';
+import { SundaeSwapAnalyzer } from './dex/SundaeSwapAnalyzer';
+import { SundaeSwapV3Analyzer } from './dex/SundaeSwapV3Analyzer';
+import { VyFiAnalyzer } from './dex/VyFiAnalyzer';
+import { WingRidersAnalyzer } from './dex/WingRidersAnalyzer';
+import { WingRidersStableV2Analyzer } from './dex/WingRidersStableV2Analyzer';
+import { WingRidersV2Analyzer } from './dex/WingRidersV2Analyzer';
+import { AmmDexTransactionIndexer } from './indexers/AmmDexTransactionIndexer';
 import { BaseIndexer } from './indexers/BaseIndexer';
+import { HybridDexTransactionIndexer } from './indexers/HybridDexTransactionIndexer';
+import { SyncIndexer } from './indexers/SyncIndexer';
 import {
   cronjobService,
   dbService,
@@ -49,21 +64,21 @@ export class IndexerApplication {
    * Indexers to make aware of new blocks & rollbacks.
    */
   private _indexers: BaseIndexer[] = [
-    // new SyncIndexer(),
-    // new AmmDexTransactionIndexer([
-    //   new MinswapAnalyzer(this),
-    //   new MinswapV2Analyzer(this),
-    //   new MinswapStableAnalyzer(this),
-    //   new SundaeSwapAnalyzer(this),
-    //   new SundaeSwapV3Analyzer(this),
-    //   new WingRidersAnalyzer(this),
-    //   new WingRidersV2Analyzer(this),
-    //   new SpectrumAnalyzer(this),
-    //   new SplashAnalyzer(this),
-    //   new WingRidersStableV2Analyzer(this),
-    //   new VyFiAnalyzer(this),
-    // ]),
-    // new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
+    new SyncIndexer(),
+    new AmmDexTransactionIndexer([
+      new MinswapAnalyzer(this),
+      new MinswapV2Analyzer(this),
+      new MinswapStableAnalyzer(this),
+      new SundaeSwapAnalyzer(this),
+      new SundaeSwapV3Analyzer(this),
+      new WingRidersAnalyzer(this),
+      new WingRidersV2Analyzer(this),
+      new SpectrumAnalyzer(this),
+      new SplashAnalyzer(this),
+      new WingRidersStableV2Analyzer(this),
+      new VyFiAnalyzer(this),
+    ]),
+    new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
   ];
 
   /**

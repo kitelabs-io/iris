@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import CONFIG from '../config';
 import { dbService } from '../indexerServices';
 import { logError, logInfo, logWarning } from '../logger';
 import { BaseCronjob } from './BaseCronjob';
@@ -41,26 +42,33 @@ export class HealthCheckCronjob extends BaseCronjob {
   private async checkSyncStatus(): Promise<void> {
     try {
       await dbService.transaction(async (manager: EntityManager) => {
-        const lastSync = await manager.query(`
-          SELECT slot, blockHash, updatedAt
+        const result = await manager.query<
+          {
+            slot: number;
+            blockHash: string;
+            updatedAt: Date;
+            currentTime: Date;
+          }[]
+        >(`
+          SELECT slot, blockHash, updatedAt, CURRENT_TIMESTAMP as currentTime
           FROM syncs
           ORDER BY id DESC
           LIMIT 1
         `);
 
-        console.log(lastSync);
-
-        if (!lastSync || lastSync.length === 0) {
+        if (!result || result.length === 0) {
           logWarning('No sync record found');
           return;
         }
 
-        const syncRecord = lastSync[0];
-        const lastSyncTime = new Date(syncRecord.created_at);
-        const timeDiff = Date.now() - lastSyncTime.getTime();
-        const minutesSinceLastSync = Math.floor(timeDiff / (1000 * 60));
+        const syncRecord = result[0];
+        const lastSyncTime = syncRecord.updatedAt.getTime();
+        const currentTime = syncRecord.currentTime.getTime();
+        const timeDiff = currentTime - lastSyncTime;
+        const minutesSinceLastSync = timeDiff / (1000 * 60);
 
-        if (minutesSinceLastSync > 10) {
+        if (minutesSinceLastSync > CONFIG.SYNC_STALE_THRESHOLD_MINUTES) {
+          // @TODO: add alerting
           logWarning(
             `Sync potentially stalled: ${minutesSinceLastSync} minutes since last sync`
           );
@@ -71,7 +79,7 @@ export class HealthCheckCronjob extends BaseCronjob {
         }
 
         logInfo(
-          `Current sync position: slot ${syncRecord.slot}, block ${syncRecord.block_hash}`
+          `Current sync position: slot ${syncRecord.slot}, block ${syncRecord.blockHash}`
         );
       });
     } catch (error) {
