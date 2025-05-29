@@ -23,8 +23,6 @@ import {
 import { toDefinitionDatum } from '../utils';
 import { BaseAmmDexAnalyzer } from './BaseAmmDexAnalyzer';
 import poolDefinition from './definitions/splash-stable/pool';
-import { log } from 'console';
-import { logInfo } from '../logger';
 
 /**
  * Splash constants.
@@ -80,10 +78,6 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
 
         const addressDetails: AddressDetails = getAddressDetails(
           output.toAddress
-        );
-
-        logInfo(
-          `Analyzing output at address: ${transaction.hash} -- ${addressDetails.paymentCredential?.hash}`
         );
 
         if (
