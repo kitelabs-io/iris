@@ -17,18 +17,20 @@ import CONFIG from './config';
 import { FIRST_SYNC_BLOCK_HASH, FIRST_SYNC_SLOT } from './constants';
 import { Sync } from './db/entities/Sync';
 import { MinswapAnalyzer } from './dex/MinswapAnalyzer';
+import { MinswapStableAnalyzer } from './dex/MinswapStableAnalyzer';
 import { MinswapV2Analyzer } from './dex/MinswapV2Analyzer';
 import { MuesliSwapAnalyzer } from './dex/MuesliSwapAnalyzer';
+import { SpectrumAnalyzer } from './dex/SpectrumAnalyzer';
 import { SplashAnalyzer } from './dex/SplashAnalyzer';
 import { SundaeSwapAnalyzer } from './dex/SundaeSwapAnalyzer';
 import { SundaeSwapV3Analyzer } from './dex/SundaeSwapV3Analyzer';
 import { VyFiAnalyzer } from './dex/VyFiAnalyzer';
 import { WingRidersAnalyzer } from './dex/WingRidersAnalyzer';
+import { WingRidersStableV2Analyzer } from './dex/WingRidersStableV2Analyzer';
 import { WingRidersV2Analyzer } from './dex/WingRidersV2Analyzer';
 import { AmmDexTransactionIndexer } from './indexers/AmmDexTransactionIndexer';
 import { BaseIndexer } from './indexers/BaseIndexer';
 import { HybridDexTransactionIndexer } from './indexers/HybridDexTransactionIndexer';
-import { OrderBookDexTransactionIndexer } from './indexers/OrderBookDexTransactionIndexer';
 import { SyncIndexer } from './indexers/SyncIndexer';
 import {
   dbService,
@@ -41,9 +43,6 @@ import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
 import { BaseCacheStorage } from './storage/BaseCacheStorage';
 import { CacheStorage } from './storage/CacheStorage';
-import { SpectrumAnalyzer } from './dex/SpectrumAnalyzer';
-import { MinswapStableAnalyzer } from './dex/MinswapStableAnalyzer';
-import { WingRidersStableV2Analyzer } from './dex/WingRidersStableV2Analyzer';
 
 export class IndexerApplication {
   private readonly _cache: BaseCacheStorage;
@@ -73,10 +72,10 @@ export class IndexerApplication {
       // new TeddySwapAnalyzer(this),
       new VyFiAnalyzer(this),
     ]),
-    new OrderBookDexTransactionIndexer([
-      // new GeniusYieldAnalyzer(this),
-      // new AxoAnalyzer(this),
-    ]),
+    // new OrderBookDexTransactionIndexer([
+    // new GeniusYieldAnalyzer(this),
+    // new AxoAnalyzer(this),
+    // ]),
     new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
   ];
 
