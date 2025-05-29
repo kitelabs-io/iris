@@ -205,12 +205,12 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
               [DatumParameterKey.Multiplier1]: String(
                 datumParameters.Multiplier0 ?? 0
               ),
-              [DatumParameterKey.ProjectTreasuryA]: String(
-                datumParameters.ProjectTreasuryA ?? 0
+              [DatumParameterKey.Treasury0]: String(
+                datumParameters.Treasury0 ?? 0
               ),
 
-              [DatumParameterKey.ProjectTreasuryB]: String(
-                datumParameters.ProjectTreasuryB ?? 0
+              [DatumParameterKey.Treasury1]: String(
+                datumParameters.Treasury1 ?? 0
               ),
             }
           );

@@ -86,6 +86,8 @@ export enum DatumParameterKey {
   PoolAssetBTreasury = 'PoolAssetBTreasury',
   ProjectTreasuryA = 'ProjectTreasuryA',
   ProjectTreasuryB = 'ProjectTreasuryB',
+  Treasury0 = 'Treasury0',
+  Treasury1 = 'Treasury1',
   ReserveTreasuryA = 'ReserveTreasuryA',
   ReserveTreasuryB = 'ReserveTreasuryB',
   RootKLast = 'RootKLast',

@@ -79,10 +79,10 @@ export default {
       bytes: '',
     },
     {
-      int: DatumParameterKey.ProjectTreasuryA,
+      int: DatumParameterKey.Treasury0,
     },
     {
-      int: DatumParameterKey.ProjectTreasuryB,
+      int: DatumParameterKey.Treasury1,
     },
   ],
 };

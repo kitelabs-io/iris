@@ -1,4 +1,4 @@
-import { Dex } from '../src/constants';
+import { DatumParameterKey, Dex } from '../src/constants';
 import { Asset } from '../src/db/entities/Asset';
 import { LiquidityPoolState } from '../src/db/entities/LiquidityPoolState';
 import { BaseAmmDexAnalyzer } from '../src/dex/BaseAmmDexAnalyzer';
@@ -32,11 +32,16 @@ describe('Splash Stable', () => {
           '5b678b0d877ff7f879fc9ec233a8663d5dd7a4fbb598a1300b7b205c00f10eed',
         transactionIndex: 0,
       },
+      feePercent: 0.1,
+      multiplier0: '1',
+      multiplier1: '1',
+      treasury0: '0',
+      treasury1: '0',
+      amp: '3200',
+      batcherFee: '2000000',
       lpFeeNumerator: 100,
       treasuryFeeNumerator: 0,
-      treasuryA: 0,
-      treasuryB: 0,
-      feePercent: 0.1,
+      feeDenominator: 100_000,
     };
 
     const operations: AmmDexOperation[] = await analyzer.analyzeTransaction({
@@ -98,13 +103,25 @@ describe('Splash Stable', () => {
       expected.y.asset
     );
     expect(BigInt(pool.reserveA)).toEqual(
-      BigInt(expected.x.amount) - BigInt(expected.treasuryA)
+      BigInt(expected.x.amount) - BigInt(expected.treasury0)
     );
     expect(BigInt(pool.reserveB)).toEqual(
-      BigInt(expected.y.amount) - BigInt(expected.treasuryB)
+      BigInt(expected.y.amount) - BigInt(expected.treasury0)
     );
+    // Check extra field
+    expect(pool.extra[DatumParameterKey.Multiplier0]).toEqual(
+      expected.multiplier0
+    );
+    expect(pool.extra[DatumParameterKey.Multiplier1]).toEqual(
+      expected.multiplier1
+    );
+    expect(pool.extra[DatumParameterKey.Treasury0]).toEqual(expected.treasury0);
+    expect(pool.extra[DatumParameterKey.Treasury1]).toEqual(expected.treasury1);
+    expect(pool.extra[DatumParameterKey.Amp]).toEqual(expected.amp);
     expect(pool.extra.feeNumerator).toEqual(
       expected.lpFeeNumerator + expected.treasuryFeeNumerator
     );
+    expect(pool.extra.feeDenominator).toEqual(expected.feeDenominator);
+    expect(pool.extra.batcherFee).toEqual(expected.batcherFee);
   });
 });
