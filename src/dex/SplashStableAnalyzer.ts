@@ -54,7 +54,7 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
     );
   }
 
-  /**x
+  /**
    * Check for updated liquidity pool states in transaction.
    */
   protected liquidityPoolStates(
@@ -193,7 +193,7 @@ export class SplashStableAnalyzer extends BaseAmmDexAnalyzer {
                 datumParameters.Multiplier0 ?? 0
               ),
               [DatumParameterKey.Multiplier1]: String(
-                datumParameters.Multiplier0 ?? 0
+                datumParameters.Multiplier1 ?? 0
               ),
               [DatumParameterKey.Treasury0]: String(
                 datumParameters.Treasury0 ?? 0
