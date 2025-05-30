@@ -71,7 +71,11 @@ export class CronjobService extends BaseService {
     if (task) {
       task.enabled = true;
       if (this.isRunning) {
-        this.scheduleTask(task);
+        if (this.scheduledTasks.has(taskName)) {
+          logInfo(`Task ${taskName} is already scheduled.`);
+        } else {
+          this.scheduleTask(task);
+        }
       }
       logInfo(`Enabled cronjob task: ${taskName}`);
     }
