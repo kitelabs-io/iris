@@ -1,3 +1,4 @@
+import * as cron from 'node-cron';
 import { ApiApplication } from '../ApiApplication';
 import { IndexerApplication } from '../IndexerApplication';
 import { logError, logInfo } from '../logger';
@@ -12,7 +13,7 @@ export interface CronjobTask {
 
 export class CronjobService extends BaseService {
   private tasks: Map<string, CronjobTask> = new Map();
-  private intervals: Map<string, NodeJS.Timeout> = new Map();
+  private scheduledTasks: Map<string, cron.ScheduledTask> = new Map();
   private isRunning: boolean = false;
 
   constructor() {
@@ -30,6 +31,14 @@ export class CronjobService extends BaseService {
    * Register a new cronjob task
    */
   registerTask(task: CronjobTask): void {
+    // Validate cron expression
+    if (!cron.validate(task.cronExpression)) {
+      logError(
+        `Invalid cron expression for task ${task.name}: ${task.cronExpression}`
+      );
+      return;
+    }
+
     this.tasks.set(task.name, task);
     logInfo(
       `Registered cronjob task: ${task.name} with expression: ${task.cronExpression}`
@@ -44,10 +53,11 @@ export class CronjobService extends BaseService {
    * Unregister a cronjob task
    */
   unregisterTask(taskName: string): void {
-    const interval = this.intervals.get(taskName);
-    if (interval) {
-      clearInterval(interval);
-      this.intervals.delete(taskName);
+    const scheduledTask = this.scheduledTasks.get(taskName);
+    if (scheduledTask) {
+      scheduledTask.stop();
+      scheduledTask.destroy();
+      this.scheduledTasks.delete(taskName);
     }
     this.tasks.delete(taskName);
     logInfo(`Unregistered cronjob task: ${taskName}`);
@@ -74,10 +84,11 @@ export class CronjobService extends BaseService {
     const task = this.tasks.get(taskName);
     if (task) {
       task.enabled = false;
-      const interval = this.intervals.get(taskName);
-      if (interval) {
-        clearInterval(interval);
-        this.intervals.delete(taskName);
+      const scheduledTask = this.scheduledTasks.get(taskName);
+      if (scheduledTask) {
+        scheduledTask.stop();
+        scheduledTask.destroy();
+        this.scheduledTasks.delete(taskName);
       }
       logInfo(`Disabled cronjob task: ${taskName}`);
     }
@@ -95,11 +106,12 @@ export class CronjobService extends BaseService {
    */
   stop(): void {
     this.isRunning = false;
-    for (const [taskName, interval] of this.intervals) {
-      clearInterval(interval);
+    for (const [taskName, scheduledTask] of this.scheduledTasks) {
+      scheduledTask.stop();
+      scheduledTask.destroy();
       logInfo(`Stopped cronjob task: ${taskName}`);
     }
-    this.intervals.clear();
+    this.scheduledTasks.clear();
   }
 
   /**
@@ -117,20 +129,26 @@ export class CronjobService extends BaseService {
    * Schedule a single task
    */
   private scheduleTask(task: CronjobTask): void {
-    const intervalMs = this.parseIntervalFromCron(task.cronExpression);
-
-    if (intervalMs > 0) {
-      const interval = setInterval(async () => {
-        await this.executeTask(task);
-      }, intervalMs);
-
-      this.intervals.set(task.name, interval);
-      logInfo(
-        `Scheduled cronjob task: ${task.name} to run every ${intervalMs / 1000 / 60} minute(s)`
+    try {
+      const scheduledTask = cron.schedule(
+        task.cronExpression,
+        async () => {
+          await this.executeTask(task);
+        },
+        {
+          noOverlap: true,
+        }
       );
-    } else {
+
+      this.scheduledTasks.set(task.name, scheduledTask);
+      scheduledTask.start();
+
+      logInfo(
+        `Scheduled cronjob task: ${task.name} with expression: ${task.cronExpression}`
+      );
+    } catch (error) {
       logError(
-        `Invalid cron expression for task ${task.name}: ${task.cronExpression}`
+        `Failed to schedule task ${task.name} with expression ${task.cronExpression}: ${error}`
       );
     }
   }
@@ -146,99 +164,5 @@ export class CronjobService extends BaseService {
     } catch (error) {
       logError(`Error executing cronjob task ${task.name}: ${error}`);
     }
-  }
-
-  /**
-   * Parse interval from simplified cron expression.
-   * Supports simple time expressions like 30s, 5m, 1h
-   * and basic cron patterns like every N minutes or hours.
-   */
-  private parseIntervalFromCron(cronExpression: string): number {
-    // Handle simple time expressions first
-    const simpleTimeMatch = cronExpression.match(/^(\d+)(s|m|h)$/);
-    if (simpleTimeMatch) {
-      const value = parseInt(simpleTimeMatch[1]);
-      const unit = simpleTimeMatch[2];
-
-      switch (unit) {
-        case 's':
-          return value * 1000;
-        case 'm':
-          return value * 60 * 1000;
-        case 'h':
-          return value * 60 * 60 * 1000;
-      }
-    }
-
-    // Handle cron expressions
-    const parts = cronExpression.split(' ');
-    if (parts.length !== 5) {
-      return 0; // Invalid format
-    }
-
-    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
-
-    // Every minute pattern
-    if (
-      minute === '*' &&
-      hour === '*' &&
-      dayOfMonth === '*' &&
-      month === '*' &&
-      dayOfWeek === '*'
-    ) {
-      return 60 * 1000;
-    }
-
-    // Every N minutes pattern
-    const minuteIntervalMatch = minute.match(/^\*\/(\d+)$/);
-    if (
-      minuteIntervalMatch &&
-      hour === '*' &&
-      dayOfMonth === '*' &&
-      month === '*' &&
-      dayOfWeek === '*'
-    ) {
-      return parseInt(minuteIntervalMatch[1]) * 60 * 1000;
-    }
-
-    // Every hour pattern
-    if (
-      minute === '0' &&
-      hour === '*' &&
-      dayOfMonth === '*' &&
-      month === '*' &&
-      dayOfWeek === '*'
-    ) {
-      return 60 * 60 * 1000;
-    }
-
-    // Every N hours pattern
-    const hourIntervalMatch = hour.match(/^\*\/(\d+)$/);
-    if (
-      minute === '0' &&
-      hourIntervalMatch &&
-      dayOfMonth === '*' &&
-      month === '*' &&
-      dayOfWeek === '*'
-    ) {
-      return parseInt(hourIntervalMatch[1]) * 60 * 60 * 1000;
-    }
-
-    // Daily pattern
-    if (
-      minute === '0' &&
-      hour === '0' &&
-      dayOfMonth === '*' &&
-      month === '*' &&
-      dayOfWeek === '*'
-    ) {
-      return 24 * 60 * 60 * 1000;
-    }
-
-    // Default fallback - treat as every hour
-    logError(
-      `Unsupported cron pattern: ${cronExpression}, defaulting to 1 hour`
-    );
-    return 60 * 60 * 1000;
   }
 }

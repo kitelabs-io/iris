@@ -6,7 +6,7 @@ import { BaseCronjob } from './BaseCronjob';
 
 export class HealthCheckCronjob extends BaseCronjob {
   constructor() {
-    super('health-check', '5s');
+    super('health-check', '*/30 * * * * *');
   }
 
   async execute(): Promise<void> {

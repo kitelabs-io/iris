@@ -41,6 +41,7 @@ import {
   queue,
 } from './indexerServices';
 import { BaseCronjob } from './jobs/BaseCronjob';
+import { CleanupCronjob } from './jobs/CleanupCronjob';
 import { HealthCheckCronjob } from './jobs/HealthCheckCronjob';
 import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
@@ -56,7 +57,7 @@ export class IndexerApplication {
     | undefined = undefined;
   private _ogmiosContext: InteractionContext | undefined = undefined;
   private _cronjobs: BaseCronjob[] = [
-    // new CleanupCronjob(),
+    new CleanupCronjob(),
     new HealthCheckCronjob(),
   ];
 
