@@ -47,6 +47,8 @@ import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
 import { BaseCacheStorage } from './storage/BaseCacheStorage';
 import { CacheStorage } from './storage/CacheStorage';
+import { SplashStableAnalyzer } from './dex/SplashStableAnalyzer';
+import { OrderBookDexTransactionIndexer } from './indexers/OrderBookDexTransactionIndexer';
 
 export class IndexerApplication {
   private readonly _cache: BaseCacheStorage;
@@ -76,6 +78,7 @@ export class IndexerApplication {
       new WingRidersV2Analyzer(this),
       new SpectrumAnalyzer(this),
       new SplashAnalyzer(this),
+      new SplashStableAnalyzer(this),
       new WingRidersStableV2Analyzer(this),
       new VyFiAnalyzer(this),
     ]),
