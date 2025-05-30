@@ -70,4 +70,18 @@ function logError(
   return defaultLogger.error(message);
 }
 
-export { logInfo, logError };
+function logWarning(
+  message: string,
+  context: ApplicationContext = ApplicationContext.Indexer
+): Logger {
+  switch (context) {
+    case ApplicationContext.Indexer:
+      return defaultLogger.warn(message);
+    case ApplicationContext.Api:
+      return apiLogger.warn(message);
+  }
+
+  return defaultLogger.warn(message);
+}
+
+export { logInfo, logError, logWarning };

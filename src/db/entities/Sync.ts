@@ -1,4 +1,4 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity({ name: 'syncs' })
 export class Sync extends BaseEntity {
@@ -10,6 +10,12 @@ export class Sync extends BaseEntity {
 
   @Column({ type: 'bigint', unsigned: true })
   slot: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   static make(blockHash: string, slot: number): Sync {
     let instance: Sync = new Sync();

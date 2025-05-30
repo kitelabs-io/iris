@@ -33,12 +33,16 @@ import { BaseIndexer } from './indexers/BaseIndexer';
 import { HybridDexTransactionIndexer } from './indexers/HybridDexTransactionIndexer';
 import { SyncIndexer } from './indexers/SyncIndexer';
 import {
+  cronjobService,
   dbService,
   eventService,
   metadataService,
   operationWs,
   queue,
 } from './indexerServices';
+import { BaseCronjob } from './jobs/BaseCronjob';
+import { CleanupCronjob } from './jobs/CleanupCronjob';
+import { HealthCheckCronjob } from './jobs/HealthCheckCronjob';
 import { BaseEventListener } from './listeners/BaseEventListener';
 import { logError, logInfo } from './logger';
 import { BaseCacheStorage } from './storage/BaseCacheStorage';
@@ -54,6 +58,10 @@ export class IndexerApplication {
     | ChainSynchronization.ChainSynchronizationClient
     | undefined = undefined;
   private _ogmiosContext: InteractionContext | undefined = undefined;
+  private _cronjobs: BaseCronjob[] = [
+    new CleanupCronjob(),
+    new HealthCheckCronjob(),
+  ];
 
   /**
    * Indexers to make aware of new blocks & rollbacks.
@@ -72,12 +80,7 @@ export class IndexerApplication {
       new SplashAnalyzer(this),
       new SplashStableAnalyzer(this),
       new WingRidersStableV2Analyzer(this),
-      // new TeddySwapAnalyzer(this),
       new VyFiAnalyzer(this),
-    ]),
-    new OrderBookDexTransactionIndexer([
-      // new GeniusYieldAnalyzer(this),
-      // new AxoAnalyzer(this),
     ]),
     new HybridDexTransactionIndexer([new MuesliSwapAnalyzer(this)]),
   ];
@@ -85,9 +88,14 @@ export class IndexerApplication {
   /**
    * IndexerApplication constructor.
    */
-  constructor(cache?: BaseCacheStorage, indexers: BaseIndexer[] = []) {
+  constructor(
+    cache?: BaseCacheStorage,
+    indexers: BaseIndexer[] = [],
+    cronjobs: BaseCronjob[] = []
+  ) {
     this._cache = cache ?? new CacheStorage();
     this._indexers = [...this._indexers, ...indexers];
+    this._cronjobs = [...this._cronjobs, ...cronjobs];
   }
 
   /**
@@ -119,6 +127,12 @@ export class IndexerApplication {
     return this;
   }
 
+  public withCronjobs(cronjobs: BaseCronjob[]): IndexerApplication {
+    this._cronjobs = [...this._cronjobs, ...cronjobs];
+
+    return this;
+  }
+
   /**
    * Start application.
    */
@@ -140,8 +154,10 @@ export class IndexerApplication {
       operationWs.boot(),
       metadataService.boot(),
       queue.boot(),
+      cronjobService.boot(this),
     ])
       .then(() => {
+        this.registerCronjobs();
         logInfo('Services booted');
       })
       .catch((reason) => {
@@ -279,5 +295,19 @@ export class IndexerApplication {
     }
 
     requestNext();
+  }
+
+  /**
+   * Register all cronjobs with the cronjob service
+   */
+  private registerCronjobs(): void {
+    for (const cronjob of this._cronjobs) {
+      cronjobService.registerTask({
+        name: cronjob.name,
+        cronExpression: cronjob.cronExpression,
+        handler: () => cronjob.execute(),
+        enabled: cronjob.isEnabled(),
+      });
+    }
   }
 }
