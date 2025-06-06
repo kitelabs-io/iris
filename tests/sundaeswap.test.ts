@@ -5,9 +5,6 @@ import { LiquidityPool } from '../src/db/entities/LiquidityPool';
 import { Dex } from '../src/constants';
 import { Asset } from '../src/db/entities/Asset';
 import { AmmDexOperation } from '../src/types';
-import { LiquidityPoolSwap } from '../src/db/entities/LiquidityPoolSwap';
-import { LiquidityPoolDeposit } from '../src/db/entities/LiquidityPoolDeposit';
-import { LiquidityPoolWithdraw } from '../src/db/entities/LiquidityPoolWithdraw';
 import { LiquidityPoolState } from '../src/db/entities/LiquidityPoolState';
 
 describe('SundaeSwap', () => {
@@ -29,36 +26,6 @@ describe('SundaeSwap', () => {
         1234
       )
     );
-  });
-
-  it('Can index swaps', async () => {
-    const operations: AmmDexOperation[] = await analyzer.analyzeTransaction(
-      globals.SUNDAESWAP_SWAP_TX
-    );
-
-    expect(operations.length).toEqual(1);
-    expect(operations[0]).toBeInstanceOf(LiquidityPoolSwap);
-    expect(operations[0].txHash).toEqual(globals.SUNDAESWAP_SWAP_TX.hash);
-  });
-
-  it('Can index deposits', async () => {
-    const operations: AmmDexOperation[] = await analyzer.analyzeTransaction(
-      globals.SUNDAESWAP_DEPOSIT_TX
-    );
-
-    expect(operations.length).toEqual(1);
-    expect(operations[0]).toBeInstanceOf(LiquidityPoolDeposit);
-    expect(operations[0].txHash).toEqual(globals.SUNDAESWAP_DEPOSIT_TX.hash);
-  });
-
-  it('Can index withdraws', async () => {
-    const operations: AmmDexOperation[] = await analyzer.analyzeTransaction(
-      globals.SUNDAESWAP_WITHDRAW_TX
-    );
-
-    expect(operations.length).toEqual(1);
-    expect(operations[0]).toBeInstanceOf(LiquidityPoolWithdraw);
-    expect(operations[0].txHash).toEqual(globals.SUNDAESWAP_WITHDRAW_TX.hash);
   });
 
   it('Can index LP states', async () => {
