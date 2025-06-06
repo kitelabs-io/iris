@@ -61,7 +61,7 @@ const METADATA_FEES_PAID: string = '1005';
 
 const AMM_SCRIPT_HASHES = [
   '7045237d1eb0199c84dffe58fe6df7dc5d255eb4d418e4146d5721f8',
-  '4136eeede1a49030451ee3a09d900959bafeafd9b536e59345ac780f',
+  'e8baad9288dc9abdc099b46f2ac006b1a82c7df4996e067f00c04e8d',
 ];
 
 export class MuesliSwapAnalyzer extends BaseHybridDexAnalyzer {
