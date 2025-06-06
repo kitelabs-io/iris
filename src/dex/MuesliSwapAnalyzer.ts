@@ -59,6 +59,11 @@ const METADATA_OUT_NAME_HEX: string = '1003';
 const METADATA_MIN_RECEIVE: string = '1004';
 const METADATA_FEES_PAID: string = '1005';
 
+const AMM_SCRIPT_HASHES = [
+  '7045237d1eb0199c84dffe58fe6df7dc5d255eb4d418e4146d5721f8',
+  '4136eeede1a49030451ee3a09d900959bafeafd9b536e59345ac780f',
+];
+
 export class MuesliSwapAnalyzer extends BaseHybridDexAnalyzer {
   public startSlot: number = 65063916;
 
@@ -68,9 +73,9 @@ export class MuesliSwapAnalyzer extends BaseHybridDexAnalyzer {
   public async analyzeTransaction(
     transaction: Transaction
   ): Promise<HybridOperation[]> {
-    return Promise.all([
-      this.liquidityPoolStates(transaction),
-    ]).then((operations: HybridOperation[][]) => operations.flat(2));
+    return Promise.all([this.liquidityPoolStates(transaction)]).then(
+      (operations: HybridOperation[][]) => operations.flat(2)
+    );
   }
 
   protected matches(
@@ -199,6 +204,14 @@ export class MuesliSwapAnalyzer extends BaseHybridDexAnalyzer {
         );
 
         if (!hasPoolNft) {
+          return undefined;
+        }
+
+        const scriptHash =
+          getAddressDetails(output.toAddress).paymentCredential?.hash || '';
+
+        // Ignore unknown scripts
+        if (!AMM_SCRIPT_HASHES.includes(scriptHash)) {
           return undefined;
         }
 
