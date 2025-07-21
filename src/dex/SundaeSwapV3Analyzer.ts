@@ -23,7 +23,7 @@ import {
   Utxo,
 } from '../types';
 import { toDefinitionDatum, tokensMatch } from '../utils';
-import { BaseAmmDexAnalyzer } from './BaseAmmDexAnalyzer';
+import { BaseAmmDexAnalyzer, ClosePoolOperation } from './BaseAmmDexAnalyzer';
 import poolDefinition from './definitions/sundaeswap-v3/pool';
 import poolDepositDefinition from './definitions/sundaeswap-v3/pool-deposit';
 import poolWithdrawDefinition from './definitions/sundaeswap-v3/pool-withdraw';
@@ -52,9 +52,9 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
   public async analyzeTransaction(
     transaction: Transaction
   ): Promise<AmmDexOperation[]> {
-    return Promise.all([
-      this.liquidityPoolStates(transaction),
-    ]).then((operations: AmmDexOperation[][]) => operations.flat(2));
+    return Promise.all([this.liquidityPoolStates(transaction)]).then(
+      (operations: AmmDexOperation[][]) => operations.flat(2)
+    );
   }
 
   /**
@@ -245,28 +245,6 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
           return undefined;
         }
 
-        const relevantAssets: AssetBalance[] = output.assetBalances.filter(
-          (assetBalance: AssetBalance) => {
-            return assetBalance.asset.policyId !== LP_TOKEN_POLICY_ID;
-          }
-        );
-
-        if (![1, 2].includes(relevantAssets.length)) {
-          return undefined;
-        }
-
-        const lpToken: Asset | undefined = output.assetBalances.find(
-          (assetBalance: AssetBalance) => {
-            return assetBalance.asset.policyId === LP_TOKEN_POLICY_ID;
-          }
-        )?.asset;
-
-        if (!lpToken) {
-          return undefined;
-        } else {
-          lpToken.nameHex = '0014df1' + lpToken.nameHex.substr(7);
-        }
-
         try {
           const definitionField: DefinitionField = toDefinitionDatum(
             Data.from(output.datum)
@@ -293,6 +271,33 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
                   datumParameters.PoolAssetBPolicyId as string,
                   datumParameters.PoolAssetBAssetName as string
                 );
+
+          const relevantAssets: AssetBalance[] = output.assetBalances.filter(
+            (assetBalance: AssetBalance) => {
+              return assetBalance.asset.policyId !== LP_TOKEN_POLICY_ID;
+            }
+          );
+
+          if (![1, 2].includes(relevantAssets.length)) {
+            // If is closed, delete the pool
+            if (datumParameters.PoolIdentifier) {
+              const poolIdentifier = datumParameters.PoolIdentifier as string;
+              return new ClosePoolOperation(poolIdentifier);
+            }
+            return undefined;
+          }
+
+          const lpToken: Asset | undefined = output.assetBalances.find(
+            (assetBalance: AssetBalance) => {
+              return assetBalance.asset.policyId === LP_TOKEN_POLICY_ID;
+            }
+          )?.asset;
+
+          if (!lpToken) {
+            return undefined;
+          } else {
+            lpToken.nameHex = '0014df1' + lpToken.nameHex.substr(7);
+          }
 
           const possibleOperationStatuses: OperationStatus[] =
             this.spentOperationInputs(transaction);
@@ -344,9 +349,7 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
         }
       })
       .flat()
-      .filter(
-        (operation: LiquidityPoolState | undefined) => operation !== undefined
-      ) as LiquidityPoolState[];
+      .filter((operation) => operation !== undefined) as LiquidityPoolState[];
   }
 
   /**
