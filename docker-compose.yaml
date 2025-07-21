@@ -6,6 +6,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     environment:
+      - MYSQL_ROOT_PASSWORD=rootpass
       - MYSQL_DATABASE=${DATABASE}
       - MYSQL_USER=${DATABASE_USERNAME}
       - MYSQL_PASSWORD=${DATABASE_PASSWORD}

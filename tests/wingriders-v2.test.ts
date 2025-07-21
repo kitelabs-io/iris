@@ -55,6 +55,7 @@ describe('Wingriders V2', () => {
 
     expect(operations.length).toEqual(1);
     expect(operations[0]).toBeInstanceOf(LiquidityPoolState);
+    // @ts-ignore
     expect(operations[0].txHash).toEqual(
       '2920a6129cfb3b755e9e3ed7d36d7864c6f6f71b6aeba657322f64a808966aed'
     );

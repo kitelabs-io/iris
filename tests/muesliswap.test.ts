@@ -15,6 +15,7 @@ describe('MuesliSwap', () => {
 
     expect(operations.length).toEqual(1);
     expect(operations[0]).toBeInstanceOf(LiquidityPoolState);
+    // @ts-ignore
     expect(operations[0].txHash).toEqual(globals.MUESLISWAP_LP_STATE_TX.hash);
   });
 
@@ -67,6 +68,7 @@ describe('MuesliSwap', () => {
 
     expect(operations.length).toEqual(1);
     expect(operations[0]).toBeInstanceOf(LiquidityPoolState);
+    // @ts-ignore
     expect(operations[0].txHash).toEqual(txn.hash);
   });
 
@@ -119,6 +121,7 @@ describe('MuesliSwap', () => {
 
     expect(operations.length).toEqual(1);
     expect(operations[0]).toBeInstanceOf(LiquidityPoolState);
+    // @ts-ignore
     expect(operations[0].txHash).toEqual(txn.hash);
   });
 
@@ -171,6 +174,7 @@ describe('MuesliSwap', () => {
 
     expect(operations.length).toEqual(1);
     expect(operations[0]).toBeInstanceOf(LiquidityPoolState);
+    // @ts-ignore
     expect(operations[0].txHash).toEqual(txn.hash);
   });
 

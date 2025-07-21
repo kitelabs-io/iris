@@ -16,6 +16,7 @@ describe('Spectrum', () => {
 
     expect(operations.length).toEqual(1);
     expect(operations[0]).toBeInstanceOf(LiquidityPoolState);
+    // @ts-ignore
     expect(operations[0].txHash).toEqual(globals.SPECTRUM_LP_STATE_TX.hash);
   });
 

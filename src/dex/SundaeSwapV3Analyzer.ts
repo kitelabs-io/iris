@@ -23,7 +23,7 @@ import {
   Utxo,
 } from '../types';
 import { toDefinitionDatum, tokensMatch } from '../utils';
-import { BaseAmmDexAnalyzer } from './BaseAmmDexAnalyzer';
+import { BaseAmmDexAnalyzer, ClosePoolOperation } from './BaseAmmDexAnalyzer';
 import poolDefinition from './definitions/sundaeswap-v3/pool';
 import poolDepositDefinition from './definitions/sundaeswap-v3/pool-deposit';
 import poolWithdrawDefinition from './definitions/sundaeswap-v3/pool-withdraw';
@@ -31,9 +31,10 @@ import swapDefinition from './definitions/sundaeswap-v3/swap';
 import zapDefinition from './definitions/sundaeswap-v3/zap';
 
 /**
- * SundaeSwap constants.
+ * Multi-script hash for SundaeSwap V3.
+ * Including spending script hash and minting policy id
  */
-const LP_TOKEN_POLICY_ID: string =
+const MULTI_SCRIPT_HASH: string =
   'e0302560ced2fdcbfcb2602697df970cd0d6a38f94b32703f51c312b';
 const CANCEL_ORDER_DATUM: string = 'd87980';
 const DEPOSIT_FEE: bigint = 2_000000n;
@@ -52,9 +53,9 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
   public async analyzeTransaction(
     transaction: Transaction
   ): Promise<AmmDexOperation[]> {
-    return Promise.all([
-      this.liquidityPoolStates(transaction),
-    ]).then((operations: AmmDexOperation[][]) => operations.flat(2));
+    return Promise.all([this.liquidityPoolStates(transaction)]).then(
+      (operations: AmmDexOperation[][]) => operations.flat(2)
+    );
   }
 
   /**
@@ -245,26 +246,12 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
           return undefined;
         }
 
-        const relevantAssets: AssetBalance[] = output.assetBalances.filter(
-          (assetBalance: AssetBalance) => {
-            return assetBalance.asset.policyId !== LP_TOKEN_POLICY_ID;
-          }
+        const addressDetails: AddressDetails = getAddressDetails(
+          output.toAddress
         );
 
-        if (![1, 2].includes(relevantAssets.length)) {
+        if (addressDetails.paymentCredential?.hash !== MULTI_SCRIPT_HASH) {
           return undefined;
-        }
-
-        const lpToken: Asset | undefined = output.assetBalances.find(
-          (assetBalance: AssetBalance) => {
-            return assetBalance.asset.policyId === LP_TOKEN_POLICY_ID;
-          }
-        )?.asset;
-
-        if (!lpToken) {
-          return undefined;
-        } else {
-          lpToken.nameHex = '0014df1' + lpToken.nameHex.substr(7);
         }
 
         try {
@@ -293,6 +280,33 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
                   datumParameters.PoolAssetBPolicyId as string,
                   datumParameters.PoolAssetBAssetName as string
                 );
+
+          const relevantAssets: AssetBalance[] = output.assetBalances.filter(
+            (assetBalance: AssetBalance) => {
+              return assetBalance.asset.policyId !== MULTI_SCRIPT_HASH;
+            }
+          );
+
+          if (![1, 2].includes(relevantAssets.length)) {
+            // If is closed, delete the pool
+            if (datumParameters.PoolIdentifier) {
+              const poolIdentifier = datumParameters.PoolIdentifier as string;
+              return new ClosePoolOperation(poolIdentifier);
+            }
+            return undefined;
+          }
+
+          const lpToken: Asset | undefined = output.assetBalances.find(
+            (assetBalance: AssetBalance) => {
+              return assetBalance.asset.policyId === MULTI_SCRIPT_HASH;
+            }
+          )?.asset;
+
+          if (!lpToken) {
+            return undefined;
+          } else {
+            lpToken.nameHex = '0014df1' + lpToken.nameHex.substr(7);
+          }
 
           const possibleOperationStatuses: OperationStatus[] =
             this.spentOperationInputs(transaction);
@@ -344,9 +358,7 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
         }
       })
       .flat()
-      .filter(
-        (operation: LiquidityPoolState | undefined) => operation !== undefined
-      ) as LiquidityPoolState[];
+      .filter((operation) => operation !== undefined) as LiquidityPoolState[];
   }
 
   /**

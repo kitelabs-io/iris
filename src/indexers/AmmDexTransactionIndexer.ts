@@ -1,18 +1,16 @@
-import { BaseIndexer } from './BaseIndexer';
 import {
-  Slot,
   BlockPraos,
   Transaction as OgmiosTransaction,
+  Slot,
 } from '@cardano-ogmios/schema';
-import { BaseAmmDexAnalyzer } from '../dex/BaseAmmDexAnalyzer';
-import { AmmDexOperation, Transaction } from '../types';
-import { dbService } from '../indexerServices';
-import { LiquidityPoolState } from '../db/entities/LiquidityPoolState';
-import { OperationStatus } from '../db/entities/OperationStatus';
-import { logInfo } from '../logger';
-import { formatTransaction } from '../utils';
 import { slotToUnixTime } from '@lucid-evolution/lucid';
+import { BaseAmmDexAnalyzer } from '../dex/BaseAmmDexAnalyzer';
 import { AmmOperationHandler } from '../handlers/AmmOperationHandler';
+import { dbService } from '../indexerServices';
+import { logInfo } from '../logger';
+import { AmmDexOperation, Transaction } from '../types';
+import { formatTransaction } from '../utils';
+import { BaseIndexer } from './BaseIndexer';
 
 export class AmmDexTransactionIndexer extends BaseIndexer {
   private _analyzers: BaseAmmDexAnalyzer[];
@@ -43,45 +41,8 @@ export class AmmDexTransactionIndexer extends BaseIndexer {
     return await Promise.all(operationPromises).then(
       async (operationsUnSorted: AmmDexOperation[][]) => {
         const operations: AmmDexOperation[] = operationsUnSorted.flat();
-
-        const sortedOperations: AmmDexOperation[] = operations
-          .sort((a: AmmDexOperation, b: AmmDexOperation) => {
-            // Prioritize new LP states before other operations
-            if (a instanceof LiquidityPoolState) {
-              return -1;
-            }
-            if (b instanceof LiquidityPoolState) {
-              return 1;
-            }
-            return 0;
-          })
-          .sort((a: AmmDexOperation, b: AmmDexOperation) => {
-            // Prioritize orders if in same block as corresponding state
-            const inLpState = (txHash: string): boolean => {
-              return operations.some((operation: AmmDexOperation) => {
-                if (!(operation instanceof LiquidityPoolState)) return false;
-
-                const operationTxHashes: string[] =
-                  operation.possibleOperationInputs.map(
-                    (operationInput: OperationStatus) =>
-                      operationInput.operationTxHash
-                  );
-
-                return operationTxHashes.includes(txHash);
-              });
-            };
-
-            if (inLpState(a.txHash)) {
-              return -1;
-            }
-            if (inLpState(b.txHash)) {
-              return 1;
-            }
-            return 0;
-          });
-
         // Synchronize updates. 'forEach' is not sequential
-        for (const operation of sortedOperations) {
+        for (const operation of operations) {
           await this._handler.handle(operation);
         }
       }
