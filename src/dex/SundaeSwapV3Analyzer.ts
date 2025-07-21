@@ -31,9 +31,10 @@ import swapDefinition from './definitions/sundaeswap-v3/swap';
 import zapDefinition from './definitions/sundaeswap-v3/zap';
 
 /**
- * SundaeSwap constants.
+ * Multi-script hash for SundaeSwap V3.
+ * Including spending script hash and minting policy id
  */
-const LP_TOKEN_POLICY_ID: string =
+const MULTI_SCRIPT_HASH: string =
   'e0302560ced2fdcbfcb2602697df970cd0d6a38f94b32703f51c312b';
 const CANCEL_ORDER_DATUM: string = 'd87980';
 const DEPOSIT_FEE: bigint = 2_000000n;
@@ -245,6 +246,14 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
           return undefined;
         }
 
+        const addressDetails: AddressDetails = getAddressDetails(
+          output.toAddress
+        );
+
+        if (addressDetails.paymentCredential?.hash !== MULTI_SCRIPT_HASH) {
+          return undefined;
+        }
+
         try {
           const definitionField: DefinitionField = toDefinitionDatum(
             Data.from(output.datum)
@@ -274,7 +283,7 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
 
           const relevantAssets: AssetBalance[] = output.assetBalances.filter(
             (assetBalance: AssetBalance) => {
-              return assetBalance.asset.policyId !== LP_TOKEN_POLICY_ID;
+              return assetBalance.asset.policyId !== MULTI_SCRIPT_HASH;
             }
           );
 
@@ -289,7 +298,7 @@ export class SundaeSwapV3Analyzer extends BaseAmmDexAnalyzer {
 
           const lpToken: Asset | undefined = output.assetBalances.find(
             (assetBalance: AssetBalance) => {
-              return assetBalance.asset.policyId === LP_TOKEN_POLICY_ID;
+              return assetBalance.asset.policyId === MULTI_SCRIPT_HASH;
             }
           )?.asset;
 

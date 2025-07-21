@@ -1,4 +1,3 @@
-import { ClosePoolOperation } from 'src/dex/BaseAmmDexAnalyzer';
 import { BaseEntity, EntityManager, EntityTarget, IsNull } from 'typeorm';
 import CONFIG from '../config';
 import { DexOperationStatus } from '../constants';
@@ -10,13 +9,14 @@ import { LiquidityPoolSwap } from '../db/entities/LiquidityPoolSwap';
 import { LiquidityPoolWithdraw } from '../db/entities/LiquidityPoolWithdraw';
 import { LiquidityPoolZap } from '../db/entities/LiquidityPoolZap';
 import { OperationStatus } from '../db/entities/OperationStatus';
+import { ClosePoolOperation } from '../dex/BaseAmmDexAnalyzer';
 import {
   dbService,
   eventService,
   metadataService,
   operationWs,
 } from '../indexerServices';
-import { logError, logInfo, logWarning } from '../logger';
+import { logError, logInfo } from '../logger';
 import { AmmDexOperation, StatusableEntity, TokenMetadata } from '../types';
 import { stringify } from '../utils';
 
