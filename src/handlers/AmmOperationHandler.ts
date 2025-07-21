@@ -1,3 +1,4 @@
+import { ClosePoolOperation } from 'src/dex/BaseAmmDexAnalyzer';
 import { BaseEntity, EntityManager, EntityTarget, IsNull } from 'typeorm';
 import CONFIG from '../config';
 import { DexOperationStatus } from '../constants';
@@ -15,7 +16,7 @@ import {
   metadataService,
   operationWs,
 } from '../indexerServices';
-import { logError, logInfo } from '../logger';
+import { logError, logInfo, logWarning } from '../logger';
 import { AmmDexOperation, StatusableEntity, TokenMetadata } from '../types';
 import { stringify } from '../utils';
 
@@ -23,19 +24,13 @@ const MAX_RESOLVE_ATTEMPTS: number = 3;
 
 export class AmmOperationHandler {
   public async handle(operation: AmmDexOperation): Promise<any> {
-    if (CONFIG.VERBOSE) {
+    if (CONFIG.VERBOSE && 'txHash' in operation) {
       if ('dex' in operation) {
         logInfo(
-          `[${operation.dex}] ${operation.constructor.name} ${
-            (operation as AmmDexOperation).txHash
-          }`
+          `[${operation.dex}] ${operation.constructor.name} ${operation.txHash}`
         );
       } else {
-        logInfo(
-          `${operation.constructor.name} ${
-            (operation as AmmDexOperation).txHash
-          }`
-        );
+        logInfo(`${operation.constructor.name} ${operation.txHash}`);
       }
     }
 
@@ -70,6 +65,8 @@ export class AmmOperationHandler {
         return await this.handleUpdatedPoolState(
           operation as LiquidityPoolState
         );
+      case ClosePoolOperation:
+        return await this.handleClosePool(operation as ClosePoolOperation);
       // case LiquidityPoolSwap:
       //   return await this.handleSwapOrder(operation as LiquidityPoolSwap);
       // case LiquidityPoolZap:
@@ -85,6 +82,20 @@ export class AmmOperationHandler {
       default:
         return Promise.resolve(undefined);
     }
+  }
+
+  async handleClosePool(operation: ClosePoolOperation): Promise<undefined> {
+    logInfo(
+      `Detected pool closed. Deleting liquidity pool state with identifier ${operation.id}`
+    );
+    await dbService.transaction(async (manager) => {
+      await manager.delete(LiquidityPoolState, {
+        liquidityPool: {
+          identifier: operation.id,
+        },
+      });
+    });
+    return undefined;
   }
 
   /**

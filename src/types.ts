@@ -9,6 +9,7 @@ import { OperationStatus } from './db/entities/OperationStatus';
 import { OrderBookOrder } from './db/entities/OrderBookOrder';
 import { OrderBookMatch } from './db/entities/OrderBookMatch';
 import { Redeemer, Script } from '@cardano-ogmios/schema';
+import { ClosePoolOperation } from './dex/BaseAmmDexAnalyzer';
 
 export interface Utxo {
   forTxHash: TxHash;
@@ -77,7 +78,8 @@ export type AmmDexOperation =
   | LiquidityPoolWithdraw
   | LiquidityPoolSwap
   | LiquidityPoolZap
-  | OperationStatus;
+  | OperationStatus
+  | ClosePoolOperation;
 
 export type OrderBookOrderCancellation = {
   type: 'OrderBookOrderCancellation';

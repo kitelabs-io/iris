@@ -16,6 +16,10 @@ import { LiquidityPoolWithdraw } from '../db/entities/LiquidityPoolWithdraw';
 import { IndexerApplication } from '../IndexerApplication';
 import { Redeemer } from '@cardano-ogmios/schema';
 
+export class ClosePoolOperation {
+  constructor(public id: string) {}
+}
+
 export abstract class BaseAmmDexAnalyzer {
   public app: IndexerApplication;
 
@@ -31,7 +35,7 @@ export abstract class BaseAmmDexAnalyzer {
 
   protected abstract liquidityPoolStates(
     transaction: Transaction
-  ): Promise<LiquidityPoolState[]> | LiquidityPoolState[];
+  ): Promise<LiquidityPoolState[]> | LiquidityPoolState[] | ClosePoolOperation;
 
   protected abstract swapOrders(
     transaction: Transaction

@@ -1,17 +1,13 @@
-import { BaseIndexer } from './BaseIndexer';
 import {
-  Slot,
   BlockPraos,
   Transaction as OgmiosTransaction,
+  Slot,
 } from '@cardano-ogmios/schema';
-import { HybridOperation, Transaction } from '../types';
-import { LiquidityPoolState } from '../db/entities/LiquidityPoolState';
-import { OperationStatus } from '../db/entities/OperationStatus';
-import { formatTransaction } from '../utils';
 import { BaseHybridDexAnalyzer } from '../dex/BaseHybridDexAnalyzer';
 import { HybridOperationHandler } from '../handlers/HybridOperationHandler';
-import { OrderBookOrder } from '../db/entities/OrderBookOrder';
-import { OrderBookMatch } from '../db/entities/OrderBookMatch';
+import { HybridOperation, Transaction } from '../types';
+import { formatTransaction } from '../utils';
+import { BaseIndexer } from './BaseIndexer';
 
 export class HybridDexTransactionIndexer extends BaseIndexer {
   private _analyzers: BaseHybridDexAnalyzer[];
@@ -42,62 +38,8 @@ export class HybridDexTransactionIndexer extends BaseIndexer {
     return await Promise.all(operationPromises).then(
       async (operationsUnSorted: HybridOperation[][]) => {
         const operations: HybridOperation[] = operationsUnSorted.flat();
-
-        const sortedOperations: HybridOperation[] = operations
-          .sort((a: HybridOperation, b: HybridOperation) => {
-            // Prioritize new LP states before other operations
-            if (a instanceof LiquidityPoolState) {
-              return -1;
-            }
-            if (b instanceof LiquidityPoolState) {
-              return 1;
-            }
-            return 0;
-          })
-          .sort((a: HybridOperation, b: HybridOperation) => {
-            // Prioritize orders if in same block as corresponding state
-            const inLpState = (txHash: string): boolean => {
-              return operations.some((operation: HybridOperation) => {
-                if (!(operation instanceof LiquidityPoolState)) return false;
-
-                const operationTxHashes: string[] =
-                  operation.possibleOperationInputs.map(
-                    (operationInput: OperationStatus) =>
-                      operationInput.operationTxHash
-                  );
-
-                return operationTxHashes.includes(txHash);
-              });
-            };
-            const inMatch = (orderIdentifier: string): boolean => {
-              return operations.some((operation: HybridOperation) => {
-                if (!(operation instanceof OrderBookOrder)) return false;
-
-                return operation.identifier === orderIdentifier;
-              });
-            };
-
-            if (
-              inLpState(a.txHash) ||
-              (a instanceof OrderBookMatch &&
-                a.referenceOrder &&
-                inMatch(a.referenceOrder.identifier))
-            ) {
-              return -1;
-            }
-            if (
-              inLpState(b.txHash) ||
-              (b instanceof OrderBookMatch &&
-                b.referenceOrder &&
-                inMatch(b.referenceOrder.identifier))
-            ) {
-              return 1;
-            }
-            return 0;
-          });
-
         // Synchronize updates. 'forEach' is not sequential
-        for (const operation of sortedOperations) {
+        for (const operation of operations) {
           await this._handler.handle(operation);
         }
       }
