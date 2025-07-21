@@ -89,10 +89,8 @@ export class AmmOperationHandler {
       `Detected pool closed. Deleting liquidity pool state with identifier ${operation.id}`
     );
     await dbService.transaction(async (manager) => {
-      await manager.delete(LiquidityPoolState, {
-        liquidityPool: {
-          identifier: operation.id,
-        },
+      await manager.delete(LiquidityPool, {
+        identifier: operation.id,
       });
     });
     return undefined;
